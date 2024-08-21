@@ -8,6 +8,18 @@
 #define NUM_CLUSTERS 66560UI
 #define FAT_FILENAME "fat.fat"
 
+struct fat_volume_info {
+	uint32_t volume_info_siginicial; /* Assinatura dessa estrutura, DEVE SER 0x41615252 */
+	uint8_t reservado1[480]; /* Reservado, DEVE SER 0; */
+	uint32_t volume_info_sigcomp; /* Assinatura complementar para estrutura, DEVE SER 0x61417272*/
+	uint32_t clusters_livres; /* Soma de todos os clusters livres no volume 
+								0xFFFFFFFF significa que essa soma não é conhecida*/
+	uint32_t proximo_cluster_livre; /* Número do próximo cluster livre */
+	uint8_t reservado2[12]; /* Reservado, deve ser 0; */
+	uint32_t volume_info_sigfinal; /* Assinatura de integridade do fim da estrutura,
+									  DEVE SER 0xaa550000 */
+}
+
 struct fat_boot_sector {
     uint8_t boot_jump[3];	/* Instrução Jump para a localização do bootcode */
     uint8_t nome_oem[8];	/* Nome OEM, pode ser setado para qualquer valor */
