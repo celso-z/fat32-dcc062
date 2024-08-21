@@ -29,6 +29,7 @@ char boot_code[420] = "\x0e"  /* push cs */
     "pressione qualquer tecla ...\r\n";
 
 static void fill_boot_sector(struct fat_boot_sector* boot_sector);
+static void fill_volume_info(struct fat_volume_info* volume_info);
 
 //Inicializa e salva a FAT em um arquivo de nome definido pela macro FAT_FILENAME
 int init(void){
@@ -40,6 +41,20 @@ int init(void){
 	struct fat_boot_sector* boot_sector = calloc(1, sizeof(struct fat_boot_sector));
 	if(boot_sector == NULL) return -1;
 	fill_boot_sector(boot_sector);
+	struct fat_volume_info* volume_info = calloc(1, sizeof(struct fat_volume_info));
+	if(volume_info == NULL) return -1;
+	fill_volume_info(volume_info);
+	int rc = write(fat_file, boot_sector, TAMANHO_SETOR);
+	if(rc != 512) return -1;
+	rc = write(fat_file, volume_info, TAMANHO_SETOR);
+	if(rc != 512) return -1;
+	rc = lseek(fat_file, 6 * TAMANHO_SETOR, SEEK_SET);
+	if(rc != 7 * TAMANHO_SETOR) return -1;
+	rc = write(fat_file, boot_sector, TAMANHO_SETOR);
+	if(rc != 512) return -1;
+	rc = write(fat_file, volume_info, TAMANHO_SETOR);
+	if(rc != 512) return -1;
+	
 
 	return 0;
 }
@@ -59,17 +74,27 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	boot_sector->cabecas_rw = htole16(0);
 	boot_sector->setores_ocultos = htole32(0);
 	boot_sector->setores_32 = htole32(NUM_CLUSTERS * TAMANHO_CLUSTER); //Tamanho filesystem = 65MiB
-	boot_sector->tamanho_fat_32 = htole32(1);
-	boot_sector->flags = htole16(0);
-	memcpy(boot_sector->versao, "\x00\x00", strlen("\x00\x00"));
+	boot_sector->tamanho_fat_32 = htole32(520);
+	boot_sector->flags = htole16(0); //setores por FAT
+	memset(boot_sector->versao, '\x00', (size_t)2);
 	boot_sector->root_cluster = htole32(2);
 	boot_sector->setor_info = htole16(1); //FSInfo setor 1
 	boot_sector->backup_setor_boot = htole16(6); //setor em que se encontra uma cópia do setor boot
-	memcpy(boot_sector->reservado, "\x00\x00\x00\x00\x00\x00", strlen("\x00\x00\x00\x00\x00\x00"));
+	memset(boot_sector->reservado, '\x00', (size_t)6);
 	boot_sector->id_drive = 0x80; 
 	boot_sector->boot_flags = 0x00; 
 	boot_sector->assinatura_boot_extend = 0x00;
 	memcpy(boot_sector->tipo_fs, "FAT32   ", strlen("FAT32   "));
 	memcpy(boot_sector->boot_code, boot_code, strlen(boot_code));
 	boot_sector->boot_sign = htole16(0xAA55);
+}
+
+static void fill_volume_info(struct fat_volume_info* volume_info){
+	volume_info->volume_info_siginicial = htole32(0x41615252);
+	memset(volume_info->reservado1, '\x00', (size_t)480);
+	volume_info->volume_info_sigcomp = htole32(0x61417272);
+	//volume_info->clusters_livres PRECISO CALCULAR, levando em conta FAT e BPB
+	//volume_info->proximo_cluster_livre PRECISO CALCULAR, levando em conta FAT e BPB
+	memset(volume_info->reservado2, '\x00', (size_t)12);
+	volume_info->volume_info_sigfinal = htole32(0xaa550000);
 }

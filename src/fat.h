@@ -18,7 +18,7 @@ struct fat_volume_info {
 	uint8_t reservado2[12]; /* Reservado, deve ser 0; */
 	uint32_t volume_info_sigfinal; /* Assinatura de integridade do fim da estrutura,
 									  DEVE SER 0xaa550000 */
-}
+} __attribute__ ((packed));
 
 struct fat_boot_sector {
     uint8_t boot_jump[3];	/* Instrução Jump para a localização do bootcode */
