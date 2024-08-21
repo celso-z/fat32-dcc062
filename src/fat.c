@@ -36,7 +36,7 @@ int init(void){
 	if(fat_file < 0) { // TODO: abrir uma fat existente com O_EXCL
 		return -1;
 	}
-	if(ftruncate(fat_file, TAMANHO_CLUSTER * NUM_CLUSTERS)) return -1;
+	if(ftruncate(fat_file, TAMANHO_CLUSTER * NUM_CLUSTERS * TAMANHO_SETOR)) return -1;
 	struct fat_boot_sector* boot_sector = calloc(1, sizeof(struct fat_boot_sector));
 	if(boot_sector == NULL) return -1;
 	fill_boot_sector(boot_sector);
@@ -58,13 +58,13 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	boot_sector->setores_trilha = htole16(0);
 	boot_sector->cabecas_rw = htole16(0);
 	boot_sector->setores_ocultos = htole32(0);
-	boot_sector->setores_32 = htole32(NUM_CLUSTERS * TAMANHO_CLUSTER); //Tamanho filesystem = 32MiB
+	boot_sector->setores_32 = htole32(NUM_CLUSTERS * TAMANHO_CLUSTER); //Tamanho filesystem = 65MiB
 	boot_sector->tamanho_fat_32 = htole32(1);
 	boot_sector->flags = htole16(0);
 	memcpy(boot_sector->versao, "\x00\x00", strlen("\x00\x00"));
 	boot_sector->root_cluster = htole32(2);
 	boot_sector->setor_info = htole16(1); //FSInfo setor 1
-	boot_sector->backup_setor_boot = htole16(0); //setor em que se encontra uma cópia do setor boot
+	boot_sector->backup_setor_boot = htole16(6); //setor em que se encontra uma cópia do setor boot
 	memcpy(boot_sector->reservado, "\x00\x00\x00\x00\x00\x00", strlen("\x00\x00\x00\x00\x00\x00"));
 	boot_sector->id_drive = 0x80; 
 	boot_sector->boot_flags = 0x00; 
@@ -72,5 +72,4 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	memcpy(boot_sector->tipo_fs, "FAT32   ", strlen("FAT32   "));
 	memcpy(boot_sector->boot_code, boot_code, strlen(boot_code));
 	boot_sector->boot_sign = htole16(0xAA55);
-
 }

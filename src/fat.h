@@ -4,16 +4,17 @@
 #include <inttypes.h>
 
 #define TAMANHO_SETOR 512UI
-#define TAMANHO_CLUSTER 512UI
-#define NUM_CLUSTERS 128UI
+#define TAMANHO_CLUSTER 2UI
+#define NUM_CLUSTERS 66560UI
 #define FAT_FILENAME "fat.fat"
 
 struct fat_boot_sector {
     uint8_t boot_jump[3];	/* Instrução Jump para a localização do bootcode */
     uint8_t nome_oem[8];	/* Nome OEM, pode ser setado para qualquer valor */
-    uint16_t tamanho_setor;	/* Tamanho (em bytes) de cada setor */
-    uint8_t tamanho_cluster;	/* Tamanho da unidade de alocação (cluster) (em setores) 
+    uint16_t tamanho_setor;	/* Tamanho (em bytes) de cada setor 
    									(valores válidos = 512, 1024, 2048 e 4096)	*/
+    uint8_t tamanho_cluster;	/* Tamanho da unidade de alocação (cluster) (em setores) 
+   									(valores válidos = 1, 2, 4, 8, 16, 32, 64 e 128)	*/
     uint16_t setores_reservados;		/* Quantidade de setores reservados até o inicio dos dados */
     uint8_t num_fats;		/* quantidade de FATs */
     uint16_t dir_entries;	/* DEVE SER SETADO PARA 0, pois em FAT32 as entradas de diretórios ficam em cluster chains*/
