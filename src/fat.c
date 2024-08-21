@@ -6,6 +6,28 @@
 #include <string.h>
 #include <endian.h>
 
+char boot_code[420] = "\x0e"  /* push cs */
+    "\x1f"          /* pop ds */
+    "\xbe\x5b\x7c"      /* mov si, offset message_txt */
+    /* write_msg: */
+    "\xac"          /* lodsb */
+    "\x22\xc0"          /* and al, al */
+    "\x74\x0b"          /* jz key_press */
+    "\x56"          /* push si */
+    "\xb4\x0e"          /* mov ah, 0eh */
+    "\xbb\x07\x00"      /* mov bx, 0007h */
+    "\xcd\x10"          /* int 10h */
+    "\x5e"          /* pop si */
+    "\xeb\xf0"          /* jmp write_msg */
+    /* tecla pressionada: */
+    "\x32\xe4"          /* xor ah, ah */
+    "\xcd\x16"          /* int 16h */
+    "\xcd\x19"          /* int 19h */
+    "\xeb\xfe"          /* foo: jmp foo */
+    /* mensagem tentativa de boot: */
+    "NAO BOOTAVEL! Drive experimental criado para o trabalho prático disciplina DCC062\r\n"
+    "pressione qualquer tecla ...\r\n";
+
 static void fill_boot_sector(struct fat_boot_sector* boot_sector);
 
 //Inicializa e salva a FAT em um arquivo de nome definido pela macro FAT_FILENAME
@@ -48,7 +70,7 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	boot_sector->boot_flags = 0x00; 
 	boot_sector->assinatura_boot_extend = 0x00;
 	memcpy(boot_sector->tipo_fs, "FAT32   ", strlen("FAT32   "));
-	//bootcode
-	boot_sector->boot_sign = htol16(0xAA55);
+	memcpy(boot_sector->boot_code, boot_code, strlen(boot_code));
+	boot_sector->boot_sign = htole16(0xAA55);
 
 }
