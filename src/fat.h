@@ -3,6 +3,11 @@
 
 #include <inttypes.h>
 
+#define TAMANHO_SETOR 512UI
+#define TAMANHO_CLUSTER 512UI
+#define NUM_CLUSTERS 128UI
+#define FAT_FILENAME "fat.fat"
+
 struct fat_boot_sector {
     uint8_t boot_jump[3];	/* Instrução Jump para a localização do bootcode */
     uint8_t nome_oem[8];	/* Nome OEM, pode ser setado para qualquer valor */
@@ -11,9 +16,9 @@ struct fat_boot_sector {
    									(valores válidos = 512, 1024, 2048 e 4096)	*/
     uint16_t setores_reservados;		/* Quantidade de setores reservados até o inicio dos dados */
     uint8_t num_fats;		/* quantidade de FATs */
-    uint16_t dir_entries;	/* DEVE SER SETADO PARA 0 */
+    uint16_t dir_entries;	/* DEVE SER SETADO PARA 0, pois em FAT32 as entradas de diretórios ficam em cluster chains*/
     uint16_t setores_16;		/* DEVE SER SETADO PARA 0 */
-    uint8_t tipo_media;		/* Tipo de mídia (0xF8 para disco não removível, 0xF0 caso contrário) */
+    uint8_t tipo_midia;		/* Tipo de mídia (0xF8 para disco não removível, 0xF0 caso contrário) */
     uint16_t tamanho_fat_16;	/* DEVE SER SETADO PARA 0 */
     uint16_t setores_trilha;	/* Setores por trilha, utilizado para endereçamento utilizando
    									CHS no real-mode da bios (IGNORE)	*/
@@ -38,5 +43,7 @@ struct fat_boot_sector {
 	uint8_t boot_code[420]; /* Boot code */
     uint16_t boot_sign;     /* Deve ser = 0x55aa */
 } __attribute__ ((packed));
+
+int init(void);
 
 #endif 
