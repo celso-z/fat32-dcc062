@@ -57,6 +57,13 @@ struct fat_boot_sector {
     uint16_t boot_sign;     /* Deve ser = 0x55aa */
 } __attribute__ ((packed));
 
+struct fat_struct{
+	struct fat_boot_sector *bpb;
+	struct fat_volume_info *fs_info;
+	uint32_t *fat_allocation_table;
+}
+
+
 int init(void);
 
 #endif 

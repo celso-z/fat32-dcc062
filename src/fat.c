@@ -54,6 +54,11 @@ int init(void){
 	if(rc != 512) return -1;
 	rc = write(fat_file, volume_info, TAMANHO_SETOR);
 	if(rc != 512) return -1;
+	//TODO: Escrever duas cópias consecutivas da fat no arquivo
+	allocation_table = calloc(1, (sizeof(uint32_t) * NUM_CLUSTERS) + 2);
+	if(allocation_table == NULL) return -1;	
+	fill_allocation_table(allocation_table);
+	rc = write(fat_file, )
 	
 
 	return 0;
@@ -77,7 +82,7 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	boot_sector->tamanho_fat_32 = htole32(520);
 	boot_sector->flags = htole16(0); //setores por FAT
 	memset(boot_sector->versao, '\x00', (size_t)2);
-	boot_sector->root_cluster = htole32(2);
+	boot_sector->root_cluster = htole32(2); //Primeiro cluster, funciona como um root directory, segundo meus cálculos 525
 	boot_sector->setor_info = htole16(1); //FSInfo setor 1
 	boot_sector->backup_setor_boot = htole16(6); //setor em que se encontra uma cópia do setor boot
 	memset(boot_sector->reservado, '\x00', (size_t)6);
@@ -97,4 +102,37 @@ static void fill_volume_info(struct fat_volume_info* volume_info){
 	//volume_info->proximo_cluster_livre PRECISO CALCULAR, levando em conta FAT e BPB
 	memset(volume_info->reservado2, '\x00', (size_t)12);
 	volume_info->volume_info_sigfinal = htole32(0xaa550000);
+}
+
+static void fill_allocation_table(uint32_t *allocation_table){
+	for(int i = 0; i < NUM_CLUSTERS + 2; i++){
+		switch(i){
+			//Entradas na FAT reservadas no padrão
+			case 0:
+			{ 
+				allocation_table[i] = htole32(0x0ffffff8);
+				break;
+			}
+			case 1:
+			{
+				allocation_table[i] = htole32(0x0c000000);
+				break;
+			}
+			default:
+			{
+				//Entradas FAT ocupadas pela BPB e pela própria FAT
+				if(i < 525){
+					if(i == 525){
+						allocation_table[i] htole32(0xffffffff);	
+					}else{
+						allocation_table[i] = htole32(i + 1);
+					}
+				}else{
+				//Entradas livres
+					allocation_table[i] = htole32(0x00000000);
+				}
+				break;
+			}
+		}
+	}
 }
