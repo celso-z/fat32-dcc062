@@ -3,9 +3,9 @@
 
 #include <inttypes.h>
 
-#define TAMANHO_SETOR 512UI
-#define TAMANHO_CLUSTER 2UI
-#define NUM_CLUSTERS 66560UI
+#define TAMANHO_SETOR 512
+#define TAMANHO_CLUSTER 2
+#define NUM_CLUSTERS 66560
 #define FAT_FILENAME "fat.fat"
 
 struct fat_volume_info {
@@ -61,9 +61,10 @@ struct fat_struct{
 	struct fat_boot_sector *bpb;
 	struct fat_volume_info *fs_info;
 	uint32_t *fat_allocation_table;
-}
+};
 
 
-int init(void);
+struct fat_struct *init(void);
+int write_fat(struct fat_struct *fat_struct);
 
 #endif 

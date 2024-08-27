@@ -30,38 +30,54 @@ char boot_code[420] = "\x0e"  /* push cs */
 
 static void fill_boot_sector(struct fat_boot_sector* boot_sector);
 static void fill_volume_info(struct fat_volume_info* volume_info);
+static void fill_allocation_table(uint32_t *allocation_table);
 
 //Inicializa e salva a FAT em um arquivo de nome definido pela macro FAT_FILENAME
-int init(void){
+struct fat_struct *init(void){
+	struct fat_boot_sector* boot_sector = calloc(1, sizeof(struct fat_boot_sector));
+	if(boot_sector == NULL) return NULL;
+	fill_boot_sector(boot_sector);
+	struct fat_volume_info* volume_info = calloc(1, sizeof(struct fat_volume_info));
+	if(volume_info == NULL) return NULL;
+	fill_volume_info(volume_info);
+	uint32_t *allocation_table = calloc(1, (sizeof(uint32_t) * NUM_CLUSTERS) + 2);
+	if(allocation_table == NULL) return NULL;	
+	fill_allocation_table(allocation_table);
+	struct fat_struct *f = malloc(sizeof(struct fat_struct));
+	f->bpb = boot_sector;
+	f->fs_info = volume_info;
+	f->fat_allocation_table = allocation_table;
+	int rc = write_fat(f);
+	if(rc == -1) return NULL;
+	return f;
+}
+
+//Salva a FAT para o arquivo
+int write_fat(struct fat_struct *fat_struct){
 	int fat_file = open(FAT_FILENAME, O_RDWR | O_CREAT, 0755); 
 	if(fat_file < 0) { // TODO: abrir uma fat existente com O_EXCL
 		return -1;
 	}
-	if(ftruncate(fat_file, TAMANHO_CLUSTER * NUM_CLUSTERS * TAMANHO_SETOR)) return -1;
-	struct fat_boot_sector* boot_sector = calloc(1, sizeof(struct fat_boot_sector));
-	if(boot_sector == NULL) return -1;
-	fill_boot_sector(boot_sector);
-	struct fat_volume_info* volume_info = calloc(1, sizeof(struct fat_volume_info));
-	if(volume_info == NULL) return -1;
-	fill_volume_info(volume_info);
-	int rc = write(fat_file, boot_sector, TAMANHO_SETOR);
+	int rc = ftruncate(fat_file, TAMANHO_CLUSTER * NUM_CLUSTERS * TAMANHO_SETOR);
+	if(rc != 0) return -1;
+	rc = write(fat_file, fat_struct->bpb, TAMANHO_SETOR);
 	if(rc != 512) return -1;
-	rc = write(fat_file, volume_info, TAMANHO_SETOR);
+	rc = write(fat_file, fat_struct->fs_info, TAMANHO_SETOR);
 	if(rc != 512) return -1;
 	rc = lseek(fat_file, 6 * TAMANHO_SETOR, SEEK_SET);
-	if(rc != 7 * TAMANHO_SETOR) return -1;
-	rc = write(fat_file, boot_sector, TAMANHO_SETOR);
+	if(rc != (6 * TAMANHO_SETOR)) return -1;
+	rc = write(fat_file, fat_struct->bpb, TAMANHO_SETOR);
 	if(rc != 512) return -1;
-	rc = write(fat_file, volume_info, TAMANHO_SETOR);
+	rc = write(fat_file, fat_struct->fs_info, TAMANHO_SETOR);
 	if(rc != 512) return -1;
-	//TODO: Escrever duas cópias consecutivas da fat no arquivo
-	allocation_table = calloc(1, (sizeof(uint32_t) * NUM_CLUSTERS) + 2);
-	if(allocation_table == NULL) return -1;	
-	fill_allocation_table(allocation_table);
-	rc = write(fat_file, )
-	
-
+	rc = write(fat_file, fat_struct->fat_allocation_table, (sizeof(uint32_t) * NUM_CLUSTERS) + 2);
+	if(rc != (sizeof(uint32_t) * NUM_CLUSTERS) + 2) return -1;
+	rc = write(fat_file, fat_struct->fat_allocation_table, (sizeof(uint32_t) * NUM_CLUSTERS) + 2);
+	if(rc != (sizeof(uint32_t) * NUM_CLUSTERS) + 2) return -1;
+	rc = close(fat_file);
+	if(rc != 0) return -1;	
 	return 0;
+
 }
 
 static void fill_boot_sector(struct fat_boot_sector* boot_sector){
@@ -69,7 +85,7 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	memcpy((char *)boot_sector->nome_oem, "FAT_MOD", strlen("FAT_MOD"));
 	boot_sector->tamanho_setor = htole16(TAMANHO_SETOR);
 	boot_sector->tamanho_cluster = TAMANHO_CLUSTER;
-	boot_sector->setores_reservados = htole16(32);
+	boot_sector->setores_reservados = htole16(1048);//TODO: PROVAVELMENTE 524 * 2
 	boot_sector->num_fats = 2;
 	boot_sector->dir_entries = htole16(0);
 	boot_sector->setores_16 = htole16(0);
@@ -79,10 +95,10 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	boot_sector->cabecas_rw = htole16(0);
 	boot_sector->setores_ocultos = htole32(0);
 	boot_sector->setores_32 = htole32(NUM_CLUSTERS * TAMANHO_CLUSTER); //Tamanho filesystem = 65MiB
-	boot_sector->tamanho_fat_32 = htole32(520);
-	boot_sector->flags = htole16(0); //setores por FAT
+	boot_sector->tamanho_fat_32 = htole32(520); //setores por FAT
+	boot_sector->flags = htole16(0); 
 	memset(boot_sector->versao, '\x00', (size_t)2);
-	boot_sector->root_cluster = htole32(2); //Primeiro cluster, funciona como um root directory, segundo meus cálculos 525
+	boot_sector->root_cluster = htole32(525); //Primeiro cluster, funciona como um root directory, segundo meus cálculos 525
 	boot_sector->setor_info = htole16(1); //FSInfo setor 1
 	boot_sector->backup_setor_boot = htole16(6); //setor em que se encontra uma cópia do setor boot
 	memset(boot_sector->reservado, '\x00', (size_t)6);
@@ -98,14 +114,14 @@ static void fill_volume_info(struct fat_volume_info* volume_info){
 	volume_info->volume_info_siginicial = htole32(0x41615252);
 	memset(volume_info->reservado1, '\x00', (size_t)480);
 	volume_info->volume_info_sigcomp = htole32(0x61417272);
-	//volume_info->clusters_livres PRECISO CALCULAR, levando em conta FAT e BPB
-	//volume_info->proximo_cluster_livre PRECISO CALCULAR, levando em conta FAT e BPB
+	volume_info->clusters_livres = htole32(NUM_CLUSTERS - 526);//PRECISO CALCULAR, levando em conta FAT e BPB
+	volume_info->proximo_cluster_livre = htole32(526); //PRECISO CALCULAR, levando em conta FAT e BPB
 	memset(volume_info->reservado2, '\x00', (size_t)12);
 	volume_info->volume_info_sigfinal = htole32(0xaa550000);
 }
 
 static void fill_allocation_table(uint32_t *allocation_table){
-	for(int i = 0; i < NUM_CLUSTERS + 2; i++){
+	for(unsigned int i = 0; i < 66562; i++){
 		switch(i){
 			//Entradas na FAT reservadas no padrão
 			case 0:
@@ -122,14 +138,19 @@ static void fill_allocation_table(uint32_t *allocation_table){
 			{
 				//Entradas FAT ocupadas pela BPB e pela própria FAT
 				if(i < 525){
-					if(i == 525){
-						allocation_table[i] htole32(0xffffffff);	
+					if(i == 524){
+						allocation_table[i] = htole32(0x0fffffff);	
 					}else{
 						allocation_table[i] = htole32(i + 1);
 					}
 				}else{
-				//Entradas livres
-					allocation_table[i] = htole32(0x00000000);
+					if(i == 525){
+						//Primeiro cluster Livre (Serve como root directory)
+						allocation_table[i] = htole32(0x0fffffff);	
+					}else{
+						//Entradas livres
+						allocation_table[i] = htole32(0x00000000);
+					}
 				}
 				break;
 			}
