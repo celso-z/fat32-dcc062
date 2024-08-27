@@ -9,7 +9,7 @@
 char boot_code[420] = "\x0e"  /* push cs */
     "\x1f"          /* pop ds */
     "\xbe\x5b\x7c"      /* mov si, offset message_txt */
-    /* write_msg: */
+    /* write_msg: QUEBRADO: TODO: ESCREVER MENSAGEM NA TELA CALL DE SISTEMA*/
     "\xac"          /* lodsb */
     "\x22\xc0"          /* and al, al */
     "\x74\x0b"          /* jz key_press */
@@ -106,7 +106,8 @@ static void fill_boot_sector(struct fat_boot_sector* boot_sector){
 	boot_sector->boot_flags = 0x00; 
 	boot_sector->assinatura_boot_extend = 0x00;
 	memcpy(boot_sector->tipo_fs, "FAT32   ", strlen("FAT32   "));
-	memcpy(boot_sector->boot_code, boot_code, strlen(boot_code));
+	boot_code[419] = 0;
+	memcpy(boot_sector->boot_code, boot_code, 420);
 	boot_sector->boot_sign = htole16(0xAA55);
 }
 
