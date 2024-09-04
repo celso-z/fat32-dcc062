@@ -142,21 +142,34 @@ static void fill_allocation_table(uint32_t *allocation_table){
 				//Entradas FAT ocupadas pela BPB e pela própria FAT
 				if(i < 525){
 					if(i == 524){
-						allocation_table[i] = htole32(0x0fffffff);	
+						allocation_table[i] = htole32(FAT_EOF_CLUSTER);	
 					}else{
 						allocation_table[i] = htole32(i + 1);
 					}
 				}else{
 					if(i == 525){
 						//Primeiro cluster Livre (Serve como root directory)
-						allocation_table[i] = htole32(0x0fffffff);	
+						allocation_table[i] = htole32(FAT_EOF_CLUSTER);	
 					}else{
 						//Entradas livres
-						allocation_table[i] = htole32(0x00000000);
+						allocation_table[i] = htole32(FAT_FREE_CLUSTER);
 					}
 				}
 				break;
 			}
 		}
 	}
+}
+
+//Alocar n clusters de uma fat
+uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n){
+	if(fat_struct->fs_info->clusters_livres < n) return UINT32_MAX;
+	uint32_t first_cluster = fat_struct->fs_info->proximo_cluster_livre; 
+	for(int i = 0; i < n; i++){
+		if(i == n - 1) fat_struct->fat_allocation_table[first_cluster + i] = htole32(FAT_EOF_CLUSTER);
+		else fat_struct->fat_allocation_table[first_cluster + i] = htole32(first_cluster + i + 1);
+	}
+	fat_struct->fs_info->clusters_livres = htole32(fat_struct->fs_info->clusters_livres - n);
+	fat_struct->fs_info->proximo_cluster_livre = htole32(fat_struct->fs_info->proximo_cluster_livre + n);
+	return first_cluster;
 }

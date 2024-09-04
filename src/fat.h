@@ -8,6 +8,10 @@
 #define NUM_CLUSTERS 66560
 #define FAT_FILENAME "fat.fat"
 
+#define FAT_FREE_CLUSTER 0x00000000
+#define FAT_BAD_CLUSTER 0x0FFFFFF7
+#define FAT_EOF_CLUSTER 0xFFFFFFFF
+
 struct fat_volume_info {
 	uint32_t volume_info_siginicial; /* Assinatura dessa estrutura, DEVE SER 0x41615252 */
 	uint8_t reservado1[480]; /* Reservado, DEVE SER 0; */
@@ -66,5 +70,6 @@ struct fat_struct{
 
 struct fat_struct *init(char *fat_filename);
 int write_fat(struct fat_struct *fat_struct, char *fat_filename);
+uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n);
 
 #endif 
