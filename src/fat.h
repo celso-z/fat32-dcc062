@@ -64,7 +64,7 @@ struct fat_struct{
 };
 
 
-struct fat_struct *init(void);
-int write_fat(struct fat_struct *fat_struct);
+struct fat_struct *init(char *fat_filename);
+int write_fat(struct fat_struct *fat_struct, char *fat_filename);
 
 #endif 

@@ -33,7 +33,7 @@ static void fill_volume_info(struct fat_volume_info* volume_info);
 static void fill_allocation_table(uint32_t *allocation_table);
 
 //Inicializa e salva a FAT em um arquivo de nome definido pela macro FAT_FILENAME
-struct fat_struct *init(void){
+struct fat_struct *init(char *fat_filename){
 	struct fat_boot_sector* boot_sector = calloc(1, sizeof(struct fat_boot_sector));
 	if(boot_sector == NULL) return NULL;
 	fill_boot_sector(boot_sector);
@@ -47,14 +47,16 @@ struct fat_struct *init(void){
 	f->bpb = boot_sector;
 	f->fs_info = volume_info;
 	f->fat_allocation_table = allocation_table;
-	int rc = write_fat(f);
+	int rc = write_fat(f, fat_filename);
 	if(rc == -1) return NULL;
 	return f;
 }
 
 //Salva a FAT para o arquivo
-int write_fat(struct fat_struct *fat_struct){
-	int fat_file = open(FAT_FILENAME, O_RDWR | O_CREAT, 0755); 
+int write_fat(struct fat_struct *fat_struct, char *fat_filename){
+	int fat_file;
+	if(strlen(fat_filename) > 0) fat_file = open(fat_filename, O_RDWR | O_CREAT, 0755); 
+	else fat_file = open(FAT_FILENAME, O_RDWR | O_CREAT, 0755); 
 	if(fat_file < 0) { // TODO: abrir uma fat existente com O_EXCL
 		return -1;
 	}
