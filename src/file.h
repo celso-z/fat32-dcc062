@@ -28,5 +28,7 @@ struct file_struct {
 
 //Retorna um novo diretório, a partir do nome, tipo diretório e diretório pai
 struct file_struct *new_directory(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
+struct file_struct *new_file(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
+void *fetch_data(struct fat_struct *fat, struct file_struct *obj, char *fat_filename);
 
 #endif

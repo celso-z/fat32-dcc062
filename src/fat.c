@@ -193,11 +193,11 @@ int write_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char o
 		return -1;
 	}
 	if(data != NULL) {
-		rc = write(fat_file, data, sizeof(data));
-		if(rc != sizeof(data)) return -1;
+		rc = write(fat_file, data, (TAMANHO_CLUSTER * TAMANHO_SETOR));
+		if(rc != (TAMANHO_CLUSTER * TAMANHO_SETOR)) return -1;
 	}
 	rc = write(fat_file, "\xff\xff\xff\xff", 4);
-	if(rc != 1) return -1;
+	if(rc != 4) return -1;
 	close(fat_file);
 	return 0;
 }

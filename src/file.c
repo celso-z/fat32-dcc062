@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-static void *fetch_data(struct fat_struct *fat, struct file_struct *obj, char *fat_filename){
+void *fetch_data(struct fat_struct *fat, struct file_struct *obj, char *fat_filename){
 	uint32_t first_cluster = 0;
     first_cluster	= first_cluster | obj->DIR_fstClusHI;
 	first_cluster = first_cluster << 16;
@@ -69,7 +69,7 @@ struct file_struct *new_directory(char *DIR_name, char type, struct file_struct 
 	}
 	n_dir->DIR_attr = ATTR_DIRECTORY | ATTR_ARCHIVE;
 	if(type == 'h') n_dir->DIR_attr |= ATTR_HIDDEN; 
-	n_dir->DIR_fileSize = htole32(0x00000000);
+	n_dir->DIR_fileSize = htole32(32);
 	//Alocar um cluster e adicionar seu endereço à estrutura	
 	uint32_t directory_cluster = allocate_cluster(fat, 1, fat_filename);
 	if(directory_cluster == UINT32_MAX) return NULL; // Completely allocated fat
@@ -78,6 +78,7 @@ struct file_struct *new_directory(char *DIR_name, char type, struct file_struct 
 	//Atualizar data e hora
 	
 	if(parent != NULL){
+		n_dir->DIR_fileSize = htole32(64);
 		uint32_t parent_first_cluster = parent->DIR_fstClusHI;
 		parent_first_cluster = parent_first_cluster << 16;
 		parent_first_cluster = parent_first_cluster | parent->DIR_fstClusLO;
@@ -90,3 +91,30 @@ struct file_struct *new_directory(char *DIR_name, char type, struct file_struct 
 	return n_dir;
 }
 
+struct file_struct *new_file(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat, char *fat_filename){
+
+	struct file_struct *n_file = calloc(1, sizeof(struct file_struct));
+	if(parent == NULL) return NULL;
+	if(strlen(DIR_name) > 11 || strlen(DIR_name) < 3){
+		free(n_file);
+		return NULL;	
+	}
+	else{
+		strncpy(n_file->DIR_name, DIR_name, 11);	
+	}
+	n_file->DIR_attr = ATTR_DIRECTORY | ATTR_ARCHIVE;
+	if(type == 'h') n_file->DIR_attr |= ATTR_HIDDEN; 
+	n_file->DIR_fileSize = htole32(0x00000000);
+	//Alocar um cluster e adicionar seu endereço à estrutura	
+	uint32_t directory_cluster = allocate_cluster(fat, 1, fat_filename);
+	if(directory_cluster == UINT32_MAX) return NULL; // Completely allocated fat
+	n_file->DIR_fstClusLO = htole32(directory_cluster & 0x0000ffff);
+	n_file->DIR_fstClusHI = htole32(directory_cluster >> 16);
+	//Atualizar data e hora
+	
+	uint32_t parent_first_cluster = parent->DIR_fstClusHI;
+	parent_first_cluster = parent_first_cluster << 16;
+	parent_first_cluster = parent_first_cluster | parent->DIR_fstClusLO;
+	write_data(fat, parent_first_cluster, n_file, sizeof(struct file_struct), fat_filename);
+	return n_file;
+}
