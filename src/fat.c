@@ -162,7 +162,7 @@ static void fill_allocation_table(uint32_t *allocation_table){
 }
 
 //Alocar n clusters de uma fat
-uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n){
+uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n, char *fat_filename){
 	if(fat_struct->fs_info->clusters_livres < n) return UINT32_MAX;
 	uint32_t first_cluster = fat_struct->fs_info->proximo_cluster_livre; 
 	for(int i = 0; i < n; i++){
@@ -171,5 +171,55 @@ uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n){
 	}
 	fat_struct->fs_info->clusters_livres = htole32(fat_struct->fs_info->clusters_livres - n);
 	fat_struct->fs_info->proximo_cluster_livre = htole32(fat_struct->fs_info->proximo_cluster_livre + n);
+	int rc = write_cluster(first_cluster, fat_struct, 'w', fat_filename, NULL); //Write EOF to first cluster
 	return first_cluster;
+}
+
+//Escrever dados em um dado cluster em uma fat, que se localiza em um determinado arquivo, o argumento op significa a operação "a" para extender o cluster e "w" para reescrever com o cursor no início do cluster
+int write_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char op, char *fat_filename, void *data){
+	if(cluster_number == UINT32_MAX || cluster_number < 525) return -1;
+	if(fat_struct == NULL) return -1;
+	if(op != 'a' && op != 'w') return -2;
+	if(fat_struct->fat_allocation_table[cluster_number] == FAT_FREE_CLUSTER) return -3;
+
+	int fat_file = open(fat_filename, O_RDWR | O_CREAT, 0755); 
+	if(fat_file < 0) { 
+		return -1;
+	}
+	int rc = 0;
+	rc = lseek(fat_file, cluster_number * (TAMANHO_CLUSTER * TAMANHO_SETOR), SEEK_SET);
+	if(rc != cluster_number * (TAMANHO_CLUSTER * TAMANHO_SETOR)){
+		close(fat_file);
+		return -1;
+	}
+	if(data != NULL) {
+		rc = write(fat_file, data, sizeof(data));
+		if(rc != sizeof(data)) return -1;
+	}
+	rc = write(fat_file, "\xff\xff\xff\xff", 4);
+	if(rc != 1) return -1;
+	close(fat_file);
+	return 0;
+}
+
+//Ler dados de um cluster em uma fat, que se localiza em um determinado arquivo
+void *read_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char *fat_filename){
+	if(cluster_number == UINT32_MAX) return NULL;
+	if(fat_struct == NULL) return NULL;
+	if(fat_struct->fat_allocation_table[cluster_number] == FAT_FREE_CLUSTER) return NULL;
+	int fat_file = open(fat_filename, O_RDWR | O_CREAT, 0755); 
+	if(fat_file < 0) { 
+		return NULL;
+	}
+	int rc = 0;
+	rc = lseek(fat_file, cluster_number * (TAMANHO_CLUSTER * TAMANHO_SETOR), SEEK_SET);
+	if(rc != cluster_number * (TAMANHO_CLUSTER * TAMANHO_SETOR)){
+		close(fat_file);
+		return NULL;
+	}
+	void *cluster_data = malloc(TAMANHO_CLUSTER * TAMANHO_SETOR);
+	if(cluster_data == NULL) return NULL;
+	rc = read(fat_file, cluster_data, TAMANHO_CLUSTER * TAMANHO_SETOR);
+	close(fat_file);
+	return cluster_data;
 }

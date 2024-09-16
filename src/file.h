@@ -27,6 +27,6 @@ struct file_struct {
 } __attribute__ ((packed));
 
 //Retorna um novo diretório, a partir do nome, tipo diretório e diretório pai
-struct file_struct *new_directory(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat);
+struct file_struct *new_directory(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
 
 #endif

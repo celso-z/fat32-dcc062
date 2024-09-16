@@ -70,6 +70,8 @@ struct fat_struct{
 
 struct fat_struct *init(char *fat_filename);
 int write_fat(struct fat_struct *fat_struct, char *fat_filename);
-uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n);
+uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n, char *fat_filename);
+int write_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char op, char *fat_filename, void *data);
+void *read_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char *fat_filename);
 
 #endif 
