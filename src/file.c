@@ -10,29 +10,33 @@ void *fetch_data(struct fat_struct *fat, struct file_struct *obj, char *fat_file
     first_cluster	= first_cluster | obj->DIR_fstClusHI;
 	first_cluster = first_cluster << 16;
 	first_cluster =  first_cluster | obj->DIR_fstClusLO;
-	if(fat->fat_allocation_table[first_cluster] == FAT_FREE_CLUSTER) return NULL;
+	if(fat->fat_allocation_table[first_cluster + 2] == FAT_FREE_CLUSTER) return NULL;
 	//Allocar a data
-	unsigned char *data_block = (unsigned char *)malloc(TAMANHO_CLUSTER * TAMANHO_SETOR);
+	void **data_block = malloc(sizeof(data_block));
+    data_block[0] = malloc(TAMANHO_CLUSTER * TAMANHO_SETOR);
+	if(data_block[0] == NULL) return NULL;
 	for(int i = 0; i < INT_MAX; i++){
 
 		//LÊ O CLUSTER
-		unsigned char *offset = &data_block[i * TAMANHO_CLUSTER * TAMANHO_SETOR];
-		offset = (unsigned char*)read_cluster(first_cluster, fat, fat_filename);
+		data_block[i] = read_cluster(first_cluster, fat, fat_filename);
 		//VERIFICA SE TEM MAIS
-		if(first_cluster == FAT_EOF_CLUSTER) break;
-		first_cluster = fat->fat_allocation_table[first_cluster];
+		if(fat->fat_allocation_table[first_cluster + 2] == FAT_EOF_CLUSTER){
+			data_block[i+1] = NULL;
+			break;
+		} 
+		first_cluster = fat->fat_allocation_table[first_cluster + 2];
 		//ALOCA MAIS UM CHUNK DE MEMÓRIA
-		data_block = (unsigned char*)realloc(data_block, (i + 2) * TAMANHO_CLUSTER * TAMANHO_SETOR);
-		if(data_block == NULL) return NULL;
+		data_block[i + 1] = malloc(TAMANHO_CLUSTER * TAMANHO_SETOR);
+		if(data_block[i + 1] == NULL) return NULL;
 	}
 	return data_block;
 }
 
 //Escrever em cluster já alocado
 static int write_data(struct fat_struct *fat, uint32_t first_cluster, void *data, uint32_t data_size, char *fat_filename){
-	if(fat->fat_allocation_table[first_cluster] == FAT_FREE_CLUSTER) return -1;
-	while(fat->fat_allocation_table[first_cluster] != FAT_EOF_CLUSTER){
-		first_cluster = fat->fat_allocation_table[first_cluster];	
+	if(fat->fat_allocation_table[first_cluster + 2] == FAT_FREE_CLUSTER) return -1;
+	while(fat->fat_allocation_table[first_cluster + 2] != FAT_EOF_CLUSTER){
+		first_cluster = fat->fat_allocation_table[first_cluster + 2];	
 	}
 	uint8_t *cluster = read_cluster(first_cluster, fat, fat_filename);
 	for(unsigned int i = 0; i < INT_MAX; i++){
@@ -42,11 +46,12 @@ static int write_data(struct fat_struct *fat, uint32_t first_cluster, void *data
 			uint32_t available_size = (TAMANHO_CLUSTER * TAMANHO_SETOR) -  i;
 			if(available_size > data_size + 4){
 				memcpy(&cluster[i], data, data_size);
+				memcpy(&cluster[i+data_size], "\xff\xff\xff\xff", 4);
 				int rc = write_cluster(first_cluster, fat, 'w', fat_filename, cluster);
 				if(rc != 0) return rc;
 			}else{
 				uint32_t next_cluster = allocate_cluster(fat, 1, fat_filename);
-				fat->fat_allocation_table[first_cluster] = next_cluster;
+				fat->fat_allocation_table[first_cluster + 2] = next_cluster;
 				int rc = write_cluster(next_cluster, fat, 'w', fat_filename, data);
 				if(rc != 0) return rc;
 			}

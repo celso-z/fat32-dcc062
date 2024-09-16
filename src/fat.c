@@ -40,7 +40,7 @@ struct fat_struct *init(char *fat_filename){
 	struct fat_volume_info* volume_info = calloc(1, sizeof(struct fat_volume_info));
 	if(volume_info == NULL) return NULL;
 	fill_volume_info(volume_info);
-	uint32_t *allocation_table = calloc(1, (sizeof(uint32_t) * NUM_CLUSTERS) + 2);
+	uint32_t *allocation_table = calloc(1, (sizeof(uint32_t) * NUM_CLUSTERS) + (2 * (sizeof(uint32_t))));
 	if(allocation_table == NULL) return NULL;	
 	fill_allocation_table(allocation_table);
 	struct fat_struct *f = malloc(sizeof(struct fat_struct));
@@ -166,8 +166,8 @@ uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n, char *fat_fi
 	if(fat_struct->fs_info->clusters_livres < n) return UINT32_MAX;
 	uint32_t first_cluster = fat_struct->fs_info->proximo_cluster_livre; 
 	for(int i = 0; i < n; i++){
-		if(i == n - 1) fat_struct->fat_allocation_table[first_cluster + i] = htole32(FAT_EOF_CLUSTER);
-		else fat_struct->fat_allocation_table[first_cluster + i] = htole32(first_cluster + i + 1);
+		if(i == n - 1) fat_struct->fat_allocation_table[first_cluster + i + 2] = htole32(FAT_EOF_CLUSTER);
+		else fat_struct->fat_allocation_table[first_cluster + i + 2] = htole32(first_cluster + i + 1);
 	}
 	fat_struct->fs_info->clusters_livres = htole32(fat_struct->fs_info->clusters_livres - n);
 	fat_struct->fs_info->proximo_cluster_livre = htole32(fat_struct->fs_info->proximo_cluster_livre + n);
@@ -180,7 +180,7 @@ int write_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char o
 	if(cluster_number == UINT32_MAX || cluster_number < 525) return -1;
 	if(fat_struct == NULL) return -1;
 	if(op != 'a' && op != 'w') return -2;
-	if(fat_struct->fat_allocation_table[cluster_number] == FAT_FREE_CLUSTER) return -3;
+	if(fat_struct->fat_allocation_table[cluster_number + 2] == FAT_FREE_CLUSTER) return -3;
 
 	int fat_file = open(fat_filename, O_RDWR | O_CREAT, 0755); 
 	if(fat_file < 0) { 
@@ -206,7 +206,7 @@ int write_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char o
 void *read_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char *fat_filename){
 	if(cluster_number == UINT32_MAX) return NULL;
 	if(fat_struct == NULL) return NULL;
-	if(fat_struct->fat_allocation_table[cluster_number] == FAT_FREE_CLUSTER) return NULL;
+	if(fat_struct->fat_allocation_table[cluster_number + 2] == FAT_FREE_CLUSTER) return NULL;
 	int fat_file = open(fat_filename, O_RDWR | O_CREAT, 0755); 
 	if(fat_file < 0) { 
 		return NULL;
