@@ -8,6 +8,7 @@ Após o fim da utilização digite F1 e poderá verificar o estado da FAT no arq
 **DELETE ESTE ARQUIVO ANTES DE EXECUTAR NOVAMENTE**
 
 ##build
+Execute os comandos a seguir dentro do diretório src
 gcc -Wall fat.h fat.c file.h file.c file_manager.h file_manager.c main.c -o fat -lncurses
 
 ##Participantes
