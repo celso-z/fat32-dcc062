@@ -11,7 +11,9 @@ static WINDOW *create_newwin(int height, int width, int starty, int startx);
 static void destroy_win(WINDOW *local_win);
 static struct file_struct **display_directory(WINDOW *win, struct fat_struct *fat,  struct file_struct *dir, char *fat_filename, char *selected_line);
 static void display_help(WINDOW *win);
+static void display_error(WINDOW *win, const char *str);
 static void create_directory(WINDOW *win, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
+static struct file_struct *select_directory(struct file_struct **directories, char selected_line);
 
 int loop(struct fat_struct *fat, struct file_struct *root, char *fat_filename)
 {	WINDOW *my_win;
@@ -43,8 +45,18 @@ int loop(struct fat_struct *fat, struct file_struct *root, char *fat_filename)
 			case 'd':
 				create_directory(my_win, root, fat, fat_filename);
 				break;
+			case 'D':
+				struct file_struct *selected = select_directory(sub, selected_line);
+				int rc = delete_file_struct(selected, root, fat, fat_filename);
+				if(rc == -1) display_error(my_win, "Diretorio precisa estar vazio");
+				break;
 			case 'h':
 				display_help(my_win);
+				break;
+			case 10:
+				root = select_directory(sub, selected_line);
+				//destroy_win(my_win);
+				//my_win = create_newwin(height, width, ++starty,startx);
 				break;
 		}
 		sub = display_directory(my_win, fat, root, fat_filename, &selected_line);
@@ -100,6 +112,8 @@ static void display_help(WINDOW *win){
 	box(help_window, 0 , 0);
 	mvwprintw(help_window,0, 0,"%s", "Help");
 	mvwprintw(help_window,1, 1,"%s", "d - Criar novo diretorio");
+	mvwprintw(help_window,1, 1,"%s", "ENTER - Adentrar diretorio");
+	mvwprintw(help_window,1, 1,"%s", "d - Deletar diretorio");
 	wrefresh(help_window);
 	refresh();
 	getch();
@@ -107,6 +121,17 @@ static void display_help(WINDOW *win){
 	return;
 }
 
+static void display_error(WINDOW *win, const char *str){
+	WINDOW *help_window = newwin(10, 30, 7, 15);
+	box(help_window, 0 , 0);
+	mvwprintw(help_window,0, 0,"%s", "Erro!");
+	mvwprintw(help_window,1, 1,"%s", str);
+	wrefresh(help_window);
+	refresh();
+	getch();
+	destroy_win(help_window);
+	return;
+}
 
 static void create_directory(WINDOW *win, struct file_struct *parent, struct fat_struct *fat, char *fat_filename){
 	char *dir_name = malloc(sizeof(char) * 12);
@@ -124,7 +149,9 @@ static void create_directory(WINDOW *win, struct file_struct *parent, struct fat
 	destroy_win(prompt);
 	return;
 
-
-
-	return;
 }
+
+static struct file_struct *select_directory(struct file_struct **directories, char selected_line){
+	return &(directories[0][selected_line]);
+}
+

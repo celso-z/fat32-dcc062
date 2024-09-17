@@ -175,6 +175,18 @@ uint32_t allocate_cluster(struct fat_struct *fat_struct, uint8_t n, char *fat_fi
 	return first_cluster;
 }
 
+void disallocate_cluster(struct fat_struct *fat_struct, uint32_t first_cluster, char *fat_filename){
+	uint32_t old_cluster = 0; //GCC reclama se declarar dentro do while
+	while(fat_struct->fat_allocation_table[first_cluster] != FAT_EOF_CLUSTER){
+		old_cluster = first_cluster;	
+		first_cluster = fat_struct->fat_allocation_table[first_cluster];
+		fat_struct->fat_allocation_table[old_cluster] = FAT_FREE_CLUSTER;
+	}
+	fat_struct->fat_allocation_table[old_cluster] = FAT_FREE_CLUSTER;
+	return;
+
+}
+
 //Escrever dados em um dado cluster em uma fat, que se localiza em um determinado arquivo, o argumento op significa a operação "a" para extender o cluster e "w" para reescrever com o cursor no início do cluster
 int write_cluster(uint32_t cluster_number, struct fat_struct *fat_struct, char op, char *fat_filename, void *data){
 	if(cluster_number == UINT32_MAX || cluster_number < 525) return -1;

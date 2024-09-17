@@ -107,7 +107,7 @@ struct file_struct *new_file(char *DIR_name, char type, struct file_struct *pare
 	else{
 		strncpy(n_file->DIR_name, DIR_name, 11);	
 	}
-	n_file->DIR_attr = ATTR_DIRECTORY | ATTR_ARCHIVE;
+	n_file->DIR_attr = ATTR_ARCHIVE;
 	if(type == 'h') n_file->DIR_attr |= ATTR_HIDDEN; 
 	n_file->DIR_fileSize = htole32(0x00000000);
 	//Alocar um cluster e adicionar seu endereço à estrutura	
@@ -122,4 +122,29 @@ struct file_struct *new_file(char *DIR_name, char type, struct file_struct *pare
 	parent_first_cluster = parent_first_cluster | parent->DIR_fstClusLO;
 	write_data(fat, parent_first_cluster, n_file, sizeof(struct file_struct), fat_filename);
 	return n_file;
+}
+
+int delete_file_struct(struct file_struct *dir, struct file_struct *parent, struct fat_struct *fat, char *fat_filename){
+	//Deletar a entrada do parent
+	uint32_t fat_entry = 0;
+    fat_entry	= fat_entry | parent->DIR_fstClusHI;
+	fat_entry = fat_entry << 16;
+	fat_entry =  fat_entry | parent->DIR_fstClusLO;
+	char *data_block = read_cluster(fat_entry, fat, fat_filename);
+	data_block[TAMANHO_CLUSTER * TAMANHO_SETOR - 1] = '\0'; //cstring compliant
+	char dir_name[12];
+	memcpy(dir_name, dir->DIR_name, 11);
+	dir_name[11] = '\0';//cstring compliant
+	char *str = memmem(data_block, TAMANHO_CLUSTER * TAMANHO_SETOR, dir_name, 11);
+	int index = str - data_block;
+	memmove(data_block + index, data_block + index + 32, (TAMANHO_CLUSTER * TAMANHO_SETOR) - index - 32);
+	write_cluster(fat_entry, fat, 'w', fat_filename, data_block);
+	//Marcar como vago todos os clusters na fat do diretório e seus subs
+	fat_entry = 0;
+    fat_entry	= fat_entry | dir->DIR_fstClusHI;
+	fat_entry = fat_entry << 16;
+	fat_entry =  fat_entry | dir->DIR_fstClusLO;
+	disallocate_cluster(fat, fat_entry, fat_filename);		
+
+	return 0;
 }
