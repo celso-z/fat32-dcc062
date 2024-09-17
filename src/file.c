@@ -33,7 +33,7 @@ void *fetch_data(struct fat_struct *fat, struct file_struct *obj, char *fat_file
 }
 
 //Escrever em cluster já alocado
-static int write_data(struct fat_struct *fat, uint32_t first_cluster, void *data, uint32_t data_size, char *fat_filename){
+int write_data(struct fat_struct *fat, uint32_t first_cluster, void *data, uint32_t data_size, char *fat_filename){
 	if(fat->fat_allocation_table[first_cluster + 2] == FAT_FREE_CLUSTER) return -1;
 	while(fat->fat_allocation_table[first_cluster + 2] != FAT_EOF_CLUSTER){
 		first_cluster = fat->fat_allocation_table[first_cluster + 2];	

@@ -30,6 +30,7 @@ struct file_struct {
 struct file_struct *new_directory(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
 struct file_struct *new_file(char *DIR_name, char type, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
 void *fetch_data(struct fat_struct *fat, struct file_struct *obj, char *fat_filename);
+int write_data(struct fat_struct *fat, uint32_t first_cluster, void *data, uint32_t data_size, char *fat_filename);
 int delete_file_struct(struct file_struct *dir, struct file_struct *parent, struct fat_struct *fat, char *fat_filename);
 
 #endif
